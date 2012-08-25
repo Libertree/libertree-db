@@ -76,34 +76,38 @@ module Libertree
         end
       end
 
+      def self.query_components(query)
+        query.scan(/([+-]?"[^"]+")|([+-]?:from ".+?")|([+-]?:river ".+?")|([+-]?:contact-list ".+?")|(\S+)/).map { |c|
+          c[4] || c[3] || c[2] || c[1] || c[0].gsub(/^([+-])"/, "\\1").gsub(/^"|"$/, '')
+        }
+      end
+
       def query_components
         full_query = self.query
         if ! self.appended_to_all
           full_query += ' ' + self.account.rivers_appended.map(&:query).join(' ')
           full_query.strip!
         end
-        @query_components ||= full_query.scan(/([+-]?"[^"]+")|([+-]?:from ".+?")|([+-]?:river ".+?")|([+-]?:contact-list ".+?")|(\S+)/).map { |c|
-          c[4] || c[3] || c[2] || c[1] || c[0].gsub(/^([+-])"/, "\\1").gsub(/^"|"$/, '')
-        }
+        @query_components ||= River.query_components(full_query)
         @query_components.dup
       end
 
-      def term_matches_post?(term, post)
+      def self.term_matches_post?(term, post, account = nil)
         case term
         when /^:forest$/
           true  # Every post is a post in the forest.  :forest is sort of a no-op term
         when /^:tree$/
           post.member.account
         when /^:unread$/
-          ! post.read_by?(self.account)
+          account && ! post.read_by?(account)
         when /^:liked$/
-          post.liked_by? self.account.member
+          account && post.liked_by?(account.member)
         when /^:commented$/
-          post.commented_on_by? self.account.member
+          account && post.commented_on_by?(account.member)
         when /^:subscribed$/
-          self.account.subscribed_to? post
+          account && account.subscribed_to?(post)
         when /^:contact-list "(.+?)"$/
-          self.account.has_contact_list_by_name_containing_member?  $1, post.member
+          account && account.has_contact_list_by_name_containing_member?( $1, post.member )
         when /^:from "(.+?)"$/
           post.member.name_display == $1
         when /^:river "(.+?)"$/
@@ -114,16 +118,14 @@ module Libertree
         end
       end
 
-      def matches_post?(post)
-        parts = query_components
-
+      def self.query_components_match_post?(parts, post, account = nil)
         # Negations: Must not satisfy any of the conditions
 
         parts.dup.each do |term|
           if term =~ /^-(.+)$/
             positive_term = $1
             parts.delete term
-            return false  if term_matches_post?(positive_term, post)
+            return false  if self.term_matches_post?(positive_term, post, account)
           end
         end
 
@@ -134,7 +136,7 @@ module Libertree
           if term =~ /^\+(.+)$/
             actual_term = $1
             parts.delete term
-            matches_all &&= term_matches_post?(actual_term, post)
+            matches_all &&= self.term_matches_post?(actual_term, post, account)
           end
         end
         return false  if ! matches_all
@@ -144,12 +146,16 @@ module Libertree
         if parts.any?
           term_match = false
           parts.each do |term|
-            term_match ||= term_matches_post?(term, post)
+            term_match ||= self.term_matches_post?(term, post, account)
           end
           return false  if ! term_match
         end
 
         true
+      end
+
+      def matches_post?(post)
+        River.query_components_match_post?  self.query_components, post, self.account
       end
 
       def try_post(post)
