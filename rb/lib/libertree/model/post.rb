@@ -263,6 +263,12 @@ module Libertree
         self.prepare("SELECT * FROM posts WHERE text ILIKE '%' || ? || '%' ORDER BY time_created DESC LIMIT 42").s(q).map { |row| self.new row }
       end
 
+      def self.last(n)
+        self.prepare(
+          "SELECT * FROM posts ORDER BY id DESC LIMIT #{n.to_i}"
+        ).s.map { |row| self.new row }
+      end
+
       # TODO: Optionally restrict by account, so as not to reveal too much to browser/client
       # i.e. rivers not belonging to current account
       def rivers_belonged_to(account = nil)
