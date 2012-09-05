@@ -351,10 +351,11 @@ module Libertree
               , #{ Model.denormalised_columns_clause(Comment, 'c') }
             FROM
                 posts p
-              , comments c
+            LEFT JOIN
+                comments c
+                ON c.post_id = p.id
             WHERE
               p.id = ?
-              AND c.post_id = p.id
           }
         ).s( post_id.to_i )
 
