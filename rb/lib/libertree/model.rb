@@ -27,40 +27,48 @@ require_relative 'model/session-account'
 require_relative 'model/url-expansion'
 
 module Libertree
-  def self.slice_hash(struct, model)
-    column_prefix = model.name.split('::')[-1].downcase + '__'
-    model_columns = model.columns.map { |c|
-      column_prefix + c.name.to_s
-    }
-
-    sliced_hash = Hash[
-      *struct.members.map(&:to_s).zip(struct.values).flatten
-    ].select { |k,v|
-      model_columns.include? k
-    }
-
-    Hash[
-      # to_sym used for RDBI compatibility.
-      # Otherwise, struct-like field access doesn't work.
-      # String columns, too, for the times the fields are accessed by String keys.
-
-      sliced_hash.map { |k,v|
-        col = k.gsub(/^#{column_prefix}/, '')
-        [ col.to_sym, v, ]
-      } + sliced_hash.map { |k,v|
-        col = k.gsub(/^#{column_prefix}/, '')
-        [ col, v, ]
-      }
-    ]
-  end
-
   module Model
+    def self.denormalised_column_prefix(model)
+      model.name.split('::')[-1].downcase + '__'
+    end
+
+    def self.denormalised_columns_clause(model, table_alias = model.table)
+      prefix = self.denormalised_column_prefix(model)
+      model.columns.map { |c|
+        "#{table_alias}.#{c.name} AS #{prefix}#{c.name}"
+      }.join(', ')
+    end
+
+    def self.denormalised_row_to_model_row(struct, model)
+      column_prefix = self.denormalised_column_prefix(model)
+      model_columns = model.columns.map { |c|
+        column_prefix + c.name.to_s
+      }
+
+      sliced_hash = Hash[
+        *struct.members.map(&:to_s).zip(struct.values).flatten
+      ].select { |k,v|
+        model_columns.include? k
+      }
+
+      Hash[
+        # to_sym used for RDBI compatibility.
+        # Otherwise, struct-like field access doesn't work.
+        # String columns, too, for the times the fields are accessed by String keys.
+
+        sliced_hash.map { |k,v|
+          col = k.gsub(/^#{column_prefix}/, '')
+          [ col.to_sym, v, ]
+        } + sliced_hash.map { |k,v|
+          col = k.gsub(/^#{column_prefix}/, '')
+          [ col, v, ]
+        }
+      ]
+    end
+
     def self.denormalised_rows_to_model_instances(rows, model)
       sliced_rows = rows.map { |row|
-        Libertree.slice_hash(
-          row,
-          model
-        )
+        self.denormalised_row_to_model_row( row, model )
       }
       sliced_rows.uniq!
       sliced_rows.map { |row|

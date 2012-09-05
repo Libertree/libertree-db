@@ -339,18 +339,11 @@ module Libertree
       end
 
       def self.fetch_with_subordinates(post_id)
-        post_columns = Post.columns.map { |c|
-          "p.#{c.name} AS post__#{c.name}"
-        }.join(', ')
-        comment_columns = Comment.columns.map { |c|
-          "c.#{c.name} AS comment__#{c.name}"
-        }.join(', ')
-
         rows = DB.dbh.prepare(
           %{
             SELECT
-                #{post_columns}
-              , #{comment_columns}
+                #{ Model.denormalised_columns_clause(Post, 'p') }
+              , #{ Model.denormalised_columns_clause(Comment, 'c') }
             FROM
                 posts p
               , comments c
