@@ -31,10 +31,14 @@ module Libertree
 
       def member
         if $m4dbi_cached_fetches
-          @member = Member.cached_fetch(self.member_id)
+          @member ||= Member.cached_fetch(self.member_id)
         else
-          @member = Member[self.member_id]
+          @member ||= Member[self.member_id]
         end
+      end
+
+      def member=( _member )
+        @member = _member
       end
 
       def post
