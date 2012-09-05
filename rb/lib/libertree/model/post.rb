@@ -170,6 +170,11 @@ module Libertree
         @comments ||= Comment.on_post(self, opt)
       end
 
+      # Manually set the memoized comments cache
+      def comments=( _comments )
+        @comments = _comments
+      end
+
       def commented_on_by?(member)
         DB.dbh.sc(
           %{

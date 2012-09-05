@@ -45,14 +45,18 @@ module Libertree
             self.account.id
           )
         else
-          Post.s(
+          rows = DB.dbh.prepare(
             %{
               SELECT * FROM (
                 SELECT
-                  p.*
+                    #{ Model.denormalised_columns_clause(Post, 'p') }
+                  , #{ Model.denormalised_columns_clause(Comment, 'c') }
                 FROM
                     river_posts rp
                   , posts p
+                LEFT JOIN
+                    comments c
+                    ON c.post_id = p.id
                 WHERE
                   p.id = rp.post_id
                   AND rp.river_id = ?
@@ -67,12 +71,22 @@ module Libertree
                 ORDER BY p.time_created DESC
                 LIMIT #{limit}
               ) AS x
-              ORDER BY id
-            },
+              ORDER BY post__id
+            }
+          ).s(
             self.id,
             time,
             self.account.id
           )
+
+          posts = Model.denormalised_rows_to_model_instances( rows, Post )
+          comments = Model.denormalised_rows_to_model_instances( rows, Comment )
+
+          posts.each do |p|
+            p.comments = comments.find_all { |c| c.post_id == p.id }
+          end
+
+          posts
         end
       end
 
