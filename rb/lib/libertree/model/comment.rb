@@ -91,6 +91,10 @@ module Libertree
         @likes ||= CommentLike.prepare("SELECT * FROM comment_likes WHERE comment_id = ? ORDER BY id DESC").s(self.id).map { |row| CommentLike.new row }
       end
 
+      def likes=( _likes )
+        @likes = _likes
+      end
+
       def notify_about_like(like)
         notification_attributes = {
           'type'         => 'comment-like',

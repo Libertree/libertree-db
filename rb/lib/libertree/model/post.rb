@@ -195,6 +195,11 @@ module Libertree
         @likes ||= PostLike.prepare("SELECT * FROM post_likes WHERE post_id = ? ORDER BY id DESC").s(self.id).map { |row| PostLike.new row }
       end
 
+      # Manually set the memoized likes cache
+      def likes=( _likes )
+        @likes = _likes
+      end
+
       def notify_about_comment(comment)
         notification_attributes = {
           'type'       => 'comment',

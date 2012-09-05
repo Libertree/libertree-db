@@ -51,12 +51,20 @@ module Libertree
                 SELECT
                     #{ Model.denormalised_columns_clause(Post, 'p') }
                   , #{ Model.denormalised_columns_clause(Comment, 'c') }
+                  , #{ Model.denormalised_columns_clause(PostLike, 'pl') }
+                  , #{ Model.denormalised_columns_clause(CommentLike, 'cl') }
                 FROM
                     river_posts rp
                   , posts p
                 LEFT JOIN
+                    post_likes pl
+                    ON pl.post_id = p.id
+                LEFT JOIN
                     comments c
                     ON c.post_id = p.id
+                LEFT JOIN
+                    comment_likes cl
+                    ON cl.comment_id = c.id
                 WHERE
                   p.id = rp.post_id
                   AND rp.river_id = ?
@@ -81,8 +89,14 @@ module Libertree
 
           posts = Model.denormalised_rows_to_model_instances( rows, Post )
           comments = Model.denormalised_rows_to_model_instances( rows, Comment )
+          post_likes = Model.denormalised_rows_to_model_instances( rows, PostLike )
+          comment_likes = Model.denormalised_rows_to_model_instances( rows, CommentLike )
+          comments.each do |c|
+            c.likes = comment_likes.find_all { |cl| cl.comment_id == c.id }
+          end
 
           posts.each do |p|
+            p.likes = post_likes.find_all { |pl| pl.post_id == p.id }
             p.comments = comments.find_all { |c| c.post_id == p.id }
           end
 
