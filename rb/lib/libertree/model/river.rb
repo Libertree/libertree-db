@@ -77,9 +77,9 @@ module Libertree
                       AND pi.post_id = rp.post_id
                   )
                 ORDER BY p.time_created DESC
-                LIMIT #{limit}
+                LIMIT 256
               ) AS x
-              ORDER BY post__id
+              ORDER BY post__id, comment__id, postlike__id, commentlike__id
             }
           ).s(
             self.id,
@@ -88,6 +88,9 @@ module Libertree
           )
 
           posts = Model.denormalised_rows_to_model_instances( rows, Post )
+          # The last post will almost always have incomplete data due to the SQL LIMIT.
+          posts.pop
+
           comments = Model.denormalised_rows_to_model_instances( rows, Comment )
           post_likes = Model.denormalised_rows_to_model_instances( rows, PostLike )
           comment_likes = Model.denormalised_rows_to_model_instances( rows, CommentLike )
