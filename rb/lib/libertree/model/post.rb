@@ -167,7 +167,7 @@ module Libertree
       # @param [Hash] opt options for restricting the comment set returned.  See Comment.to_post .
       def comments(opt = nil)
         opt ||= {}  # We put this here instead of in the method signature because sometimes nil is literally sent
-        Comment.on_post(self, opt)
+        @comments ||= Comment.on_post(self, opt)
       end
 
       def commented_on_by?(member)
@@ -336,6 +336,32 @@ module Libertree
       end
       def v_forest?
         self.visibility == 'forest' || self.visibility == 'internet'
+      end
+
+      def self.fetch_with_subordinates(post_id)
+        post_columns = Post.columns.map { |c|
+          "p.#{c.name} AS post__#{c.name}"
+        }.join(', ')
+        comment_columns = Comment.columns.map { |c|
+          "c.#{c.name} AS comment__#{c.name}"
+        }.join(', ')
+
+        rows = DB.dbh.prepare(
+          %{
+            SELECT
+                #{post_columns}
+              , #{comment_columns}
+            FROM
+                posts p
+              , comments c
+            WHERE
+              p.id = ?
+              AND c.post_id = p.id
+          }
+        ).s( post_id.to_i )
+
+        @comments = Model.denormalised_rows_to_model_instances( rows, Comment )
+        Model.denormalised_rows_to_model_instances( rows, Post )[0]
       end
     end
   end
