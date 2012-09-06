@@ -52,8 +52,16 @@ module Libertree
       def time_created
         DateTime.parse self['time_created']
       end
+      def time_commented
+        if self['time_commented']
+          DateTime.parse self['time_commented']
+        end
+      end
       def time_updated
         DateTime.parse self['time_updated']
+      end
+      def time_updated_overall
+        [time_commented, time_updated].compact.max
       end
 
       def remote?
