@@ -2,7 +2,7 @@
 
 ## Requirements
 
-* PostgreSQL 8+
+* PostgreSQL 9+
 
 ## Setup
 
