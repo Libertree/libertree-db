@@ -8,6 +8,7 @@ CREATE OR REPLACE FUNCTION posts_in_river(river_id INTEGER, account_id INTEGER, 
          WHERE
            p.id = rp.post_id
            AND rp.river_id = $1
+           AND p.group_id IS NULL
            AND CASE
              WHEN ($5 AND $4) THEN
                GREATEST(p.time_commented, p.time_updated) > $3
