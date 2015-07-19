@@ -5,8 +5,24 @@ CREATE OR REPLACE FUNCTION river_contains_post(river_id INTEGER, post_id INTEGER
 $$ LANGUAGE SQL;
 
 CREATE OR REPLACE FUNCTION post_hidden_by_account(post_id INTEGER, account_id INTEGER) RETURNS BOOLEAN AS $$
-    SELECT EXISTS(
-        SELECT 1 FROM posts_hidden WHERE post_id = $1 AND account_id = $2
+    SELECT (
+        EXISTS(
+            SELECT 1
+            FROM posts_hidden
+            WHERE
+                post_id = $1
+                AND account_id = $2
+        )
+        OR EXISTS(
+            SELECT 1
+            FROM
+                  ignored_members im
+                , posts p
+            WHERE
+                p.id = $1
+                AND im.account_id = $2
+                AND p.member_id = im.member_id
+        )
     );
 $$ LANGUAGE SQL;
 
